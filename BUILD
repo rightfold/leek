@@ -1,7 +1,9 @@
 java_binary(
     name = "leekc",
     main_class = "leek.c.Main",
-    deps = [":libleekc"],
+    deps = [
+        ":libleekc",
+    ],
     srcs = [
         "src/main/java/leek/c/Main.java",
     ],
@@ -9,7 +11,13 @@ java_binary(
 
 java_library(
     name = "libleekc",
+    deps = [
+        "@org_ow2_asm_asm//jar",
+    ],
     srcs = [
+        "src/main/java/leek/c/analysis/AnalysisException.java",
+        "src/main/java/leek/c/analysis/LocalScope.java",
+        "src/main/java/leek/c/analysis/Variable.java",
         "src/main/java/leek/c/diagnostics/SourceLocation.java",
         "src/main/java/leek/c/syntax/Definition.java",
         "src/main/java/leek/c/syntax/Expression.java",
