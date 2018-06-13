@@ -2,7 +2,13 @@ package leek.c.syntax;
 
 import java.util.List;
 
+import leek.c.analysis.AnalysisException;
+
 import leek.c.diagnostics.SourceLocation;
+
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 
 /**
  * Definitions of subroutines.
@@ -40,5 +46,28 @@ public final class SubroutineDefinition extends Definition
         this.parameters = parameters;
         this.returnType = returnType;
         this.body = body;
+    }
+
+    public void analyze(List<ClassVisitor> classes) throws AnalysisException
+    {
+        int cwFlags = ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS;
+        ClassVisitor cv = new ClassWriter(cwFlags);
+
+        writeClassMetadata(cv);
+
+        cv.visitEnd();
+        classes.add(cv);
+    }
+
+    private void writeClassMetadata(ClassVisitor cv)
+    {
+        cv.visit(
+            Opcodes.V1_7,
+            Opcodes.ACC_PUBLIC,
+            name,
+            /* signature */ null,
+            /* superName */ "java/lang/Object",
+            /* interfaces */ null
+        );
     }
 }
