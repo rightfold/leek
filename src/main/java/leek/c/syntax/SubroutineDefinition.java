@@ -3,11 +3,13 @@ package leek.c.syntax;
 import java.util.List;
 
 import leek.c.analysis.AnalysisException;
+import leek.c.analysis.LocalScope;
 
 import leek.c.diagnostics.SourceLocation;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 /**
@@ -55,6 +57,14 @@ public final class SubroutineDefinition extends Definition
 
         writeClassMetadata(cv);
 
+        MethodVisitor mv = writeInvokeMethodMetadata(cv);
+        mv.visitCode();
+        LocalScope scope = new LocalScope(/* parent */ null);
+        body.analyze(mv, scope);
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+
         cv.visitEnd();
         classes.add(cv);
     }
@@ -68,6 +78,17 @@ public final class SubroutineDefinition extends Definition
             /* signature */ null,
             /* superName */ "java/lang/Object",
             /* interfaces */ null
+        );
+    }
+
+    private MethodVisitor writeInvokeMethodMetadata(ClassVisitor cv)
+    {
+        return cv.visitMethod(
+            Opcodes.ACC_PUBLIC,
+            /* name */ "invoke",
+            /* descriptor */ "()Ljava/lang/Object;",
+            /* signature */ null,
+            /* exceptions */ null
         );
     }
 }
