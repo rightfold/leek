@@ -86,7 +86,7 @@ public final class SubroutineDefinition extends Definition
     {
         cv.visit(
             Opcodes.V1_7,
-            Opcodes.ACC_PUBLIC,
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL,
             name,
             /* signature */ null,
             /* superName */ "java/lang/Object",
