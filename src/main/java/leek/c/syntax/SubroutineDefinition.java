@@ -4,6 +4,7 @@ import java.util.List;
 
 import leek.c.analysis.AnalysisException;
 import leek.c.analysis.LocalScope;
+import leek.c.analysis.Variable;
 
 import leek.c.diagnostics.SourceLocation;
 
@@ -59,7 +60,7 @@ public final class SubroutineDefinition extends Definition
 
         MethodVisitor mv = writeInvokeMethodMetadata(cv);
         mv.visitCode();
-        LocalScope scope = new LocalScope(/* parent */ null);
+        LocalScope scope = createBodyLocalScope();
         body.analyze(mv, scope);
         mv.visitInsn(Opcodes.RETURN);
         mv.visitMaxs(0, 0);
@@ -67,6 +68,18 @@ public final class SubroutineDefinition extends Definition
 
         cv.visitEnd();
         classes.add(cv);
+    }
+
+    private LocalScope createBodyLocalScope() throws AnalysisException
+    {
+        LocalScope scope = new LocalScope(/* parent */ null);
+        for (int i = 0; i < parameters.size(); ++i)
+        {
+            ValueParameter parameter = parameters.get(i);
+            Variable variable = new Variable(parameter.type, /* slot */ i);
+            scope.defineVariable(parameter.name, variable);
+        }
+        return scope;
     }
 
     private void writeClassMetadata(ClassVisitor cv)

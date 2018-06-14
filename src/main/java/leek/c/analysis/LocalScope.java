@@ -19,6 +19,17 @@ public final class LocalScope
         this.variables = new HashMap<>();
     }
 
+    public void defineVariable(String name, Variable variable)
+        throws AnalysisException
+    {
+        if (this.variables.containsKey(name))
+        {
+            // TODO(foldr): Throw more informational exception.
+            throw new AnalysisException();
+        }
+        this.variables.put(name, variable);
+    }
+
     public Variable getVariable(String name) throws AnalysisException
     {
         Variable variable = this.variables.get(name);
