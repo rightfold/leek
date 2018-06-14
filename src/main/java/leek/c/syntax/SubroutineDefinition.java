@@ -1,6 +1,7 @@
 package leek.c.syntax;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import leek.c.analysis.AnalysisException;
 import leek.c.analysis.LocalScope;
@@ -51,23 +52,15 @@ public final class SubroutineDefinition extends Definition
         this.body = body;
     }
 
-    public void analyze(List<ClassVisitor> classes) throws AnalysisException
+    public void analyze(List<ClassWriter> classes) throws AnalysisException
     {
         int cwFlags = ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS;
-        ClassVisitor cv = new ClassWriter(cwFlags);
-
-        writeClassMetadata(cv);
-
-        MethodVisitor mv = writeInvokeMethodMetadata(cv);
-        mv.visitCode();
-        LocalScope scope = createBodyLocalScope();
-        body.analyze(mv, scope);
-        mv.visitInsn(Opcodes.RETURN);
-        mv.visitMaxs(0, 0);
-        mv.visitEnd();
-
-        cv.visitEnd();
-        classes.add(cv);
+        ClassWriter cw = new ClassWriter(cwFlags);
+        writeClassMetadata(cw);
+        writeClinitMethod(cw);
+        writeInvokeMethod(cw);
+        cw.visitEnd();
+        classes.add(cw);
     }
 
     private LocalScope createBodyLocalScope() throws AnalysisException
@@ -76,10 +69,16 @@ public final class SubroutineDefinition extends Definition
         for (int i = 0; i < parameters.size(); ++i)
         {
             ValueParameter parameter = parameters.get(i);
-            Variable variable = new Variable(parameter.type, /* slot */ i);
+            int slot = i + 1;
+            Variable variable = new Variable(parameter.type, slot);
             scope.defineVariable(parameter.name, variable);
         }
         return scope;
+    }
+
+    private String classDescriptor()
+    {
+        return "L" + name + ";";
     }
 
     private void writeClassMetadata(ClassVisitor cv)
@@ -94,14 +93,70 @@ public final class SubroutineDefinition extends Definition
         );
     }
 
+    private void writeClinitMethod(ClassVisitor cv)
+    {
+        MethodVisitor mv = writeClinitMethodMetadata(cv);
+        mv.visitCode();
+        mv.visitTypeInsn(Opcodes.NEW, name);
+        mv.visitInsn(Opcodes.DUP);
+        mv.visitMethodInsn(
+            Opcodes.INVOKESPECIAL,
+            /* owner */ name,
+            /* name */ "<init>",
+            /* descriptor */ "()V",
+            /* isInterface */ false
+        );
+        mv.visitFieldInsn(
+            Opcodes.PUTSTATIC,
+            /* owner */ name,
+            /* name */ "instance",
+            /* descriptor */ classDescriptor()
+        );
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    private MethodVisitor writeClinitMethodMetadata(ClassVisitor cv)
+    {
+        return cv.visitMethod(
+            Opcodes.ACC_PRIVATE,
+            /* name */ "<clinit>",
+            /* descriptor */ "()V",
+            /* signature */ null,
+            /* exceptions */ null
+        );
+    }
+
+    private void writeInvokeMethod(ClassVisitor cv) throws AnalysisException
+    {
+        MethodVisitor mv = writeInvokeMethodMetadata(cv);
+        mv.visitCode();
+        LocalScope scope = createBodyLocalScope();
+        body.analyze(mv, scope);
+        mv.visitInsn(returnType.returnOpcode());
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
     private MethodVisitor writeInvokeMethodMetadata(ClassVisitor cv)
     {
         return cv.visitMethod(
             Opcodes.ACC_PUBLIC,
             /* name */ "invoke",
-            /* descriptor */ "()Ljava/lang/Object;",
+            invokeMethodDescriptor(),
             /* signature */ null,
             /* exceptions */ null
         );
+    }
+
+    private String invokeMethodDescriptor()
+    {
+        String parameterDescriptors =
+            parameters.stream()
+            .map(p -> p.type.descriptor())
+            .collect(Collectors.joining());
+        String returnTypeDescriptor = returnType.descriptor();
+        return "(" + parameterDescriptors + ")" + returnTypeDescriptor;
     }
 }

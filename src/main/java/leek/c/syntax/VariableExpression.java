@@ -27,7 +27,7 @@ public final class VariableExpression extends Expression
          throws AnalysisException
     {
         Variable variable = ls.getVariable(name);
-        mv.visitVarInsn(Opcodes.ALOAD, variable.slot);
+        mv.visitVarInsn(variable.type.loadOpcode(), variable.slot);
         return variable.type;
     }
 }

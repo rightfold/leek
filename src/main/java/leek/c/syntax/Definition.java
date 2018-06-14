@@ -6,7 +6,7 @@ import leek.c.analysis.AnalysisException;
 
 import leek.c.diagnostics.SourceLocation;
 
-import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
 
 /**
  * Base class for syntax elements that appear at the top-levels of source
@@ -24,5 +24,6 @@ public abstract class Definition extends Node
      *
      * @param classes A list of classes onto which to append generated classes.
      */
-    public abstract void analyze(List<ClassVisitor> classes) throws AnalysisException;
+    public abstract void analyze(List<ClassWriter> classes)
+        throws AnalysisException;
 }
