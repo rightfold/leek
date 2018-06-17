@@ -38,6 +38,14 @@ public final class LocalScope
     }
 
     /**
+     * The slot of the tracer.
+     */
+    public int tracerSlot() throws AnalysisException
+    {
+        return 1;
+    }
+
+    /**
      * The slot of the result variable.
      *
      * @throws AnalysisException If there is no result variable.

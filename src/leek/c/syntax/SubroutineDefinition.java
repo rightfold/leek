@@ -57,7 +57,9 @@ public final class SubroutineDefinition extends Definition
         int cwFlags = ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS;
         ClassWriter cw = new ClassWriter(cwFlags);
         writeClassMetadata(cw);
+        writeInstanceField(cw);
         writeClinitMethod(cw);
+        writeInitMethod(cw);
         writeInvokeMethod(cw);
         cw.visitEnd();
         classes.add(cw);
@@ -65,10 +67,10 @@ public final class SubroutineDefinition extends Definition
 
     private LocalScope createBodyLocalScope() throws AnalysisException
     {
-        // Skip the receiver, so start at one.
-        int slot = 1;
-
         LocalScope scope = new LocalScope();
+
+        // Skip the receiver and the tracer, so start at two.
+        int slot = 2;
 
         for (ValueParameter parameter : parameters)
         {
@@ -99,6 +101,17 @@ public final class SubroutineDefinition extends Definition
         );
     }
 
+    private void writeInstanceField(ClassVisitor cv)
+    {
+        cv.visitField(
+            Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
+            /* name */ "INSTANCE",
+            classDescriptor(),
+            /* signature */ null,
+            /* value */ null
+        );
+    }
+
     private void writeClinitMethod(ClassVisitor cv)
     {
         MethodVisitor mv = writeClinitMethodMetadata(cv);
@@ -115,7 +128,7 @@ public final class SubroutineDefinition extends Definition
         mv.visitFieldInsn(
             Opcodes.PUTSTATIC,
             /* owner */ name,
-            /* name */ "instance",
+            /* name */ "INSTANCE",
             /* descriptor */ classDescriptor()
         );
         mv.visitInsn(Opcodes.RETURN);
@@ -126,8 +139,36 @@ public final class SubroutineDefinition extends Definition
     private MethodVisitor writeClinitMethodMetadata(ClassVisitor cv)
     {
         return cv.visitMethod(
-            Opcodes.ACC_PRIVATE,
+            Opcodes.ACC_STATIC,
             /* name */ "<clinit>",
+            /* descriptor */ "()V",
+            /* signature */ null,
+            /* exceptions */ null
+        );
+    }
+
+    private void writeInitMethod(ClassVisitor cv)
+    {
+        MethodVisitor mv = writeInitMethodMetadata(cv);
+        mv.visitCode();
+        mv.visitVarInsn(Opcodes.ALOAD, 0);
+        mv.visitMethodInsn(
+            Opcodes.INVOKESPECIAL,
+            /* owner */ "java/lang/Object",
+            /* name */ "<init>",
+            /* descriptor */ "()V",
+            /* isInterface */ false
+        );
+        mv.visitInsn(Opcodes.RETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    private MethodVisitor writeInitMethodMetadata(ClassVisitor cv)
+    {
+        return cv.visitMethod(
+            Opcodes.ACC_PRIVATE,
+            /* name */ "<init>",
             /* descriptor */ "()V",
             /* signature */ null,
             /* exceptions */ null
@@ -142,19 +183,9 @@ public final class SubroutineDefinition extends Definition
         LocalScope scope = createBodyLocalScope();
         int resultSlot = scope.resultSlot();
 
-        // Initialize result variable.
-        returnType.defaultValue(mv);
-        mv.visitVarInsn(returnType.storeOpcode(), resultSlot);
-
-        // Analyze body.
-        for (Statement statement : body)
-        {
-            statement.analyze(mv, scope);
-        }
-
-        // Return value of result variable.
-        mv.visitVarInsn(returnType.loadOpcode(), resultSlot);
-        mv.visitInsn(returnType.returnOpcode());
+        writeInvokePrologue(mv, scope);
+        writeInvokeBody(mv, scope);
+        writeInvokeEpilogue(mv, scope);
 
         mv.visitMaxs(0, 0);
         mv.visitEnd();
@@ -173,11 +204,64 @@ public final class SubroutineDefinition extends Definition
 
     private String invokeMethodDescriptor()
     {
-        String parameterDescriptors =
+        String tracerD = "Lleek/rt/Tracer;";
+        String parameterDs =
             parameters.stream()
             .map(p -> p.type.descriptor())
             .collect(Collectors.joining());
-        String returnTypeDescriptor = returnType.descriptor();
-        return "(" + parameterDescriptors + ")" + returnTypeDescriptor;
+        String returnTypeD = returnType.descriptor();
+        return "(" + tracerD + parameterDs + ")" + returnTypeD;
+    }
+
+    private void writeInvokePrologue(MethodVisitor mv, LocalScope scope)
+        throws AnalysisException
+    {
+        // Tell the tracer the subroutine has been entered.
+        if (kind == SubroutineKind.PROCEDURE)
+        {
+            mv.visitVarInsn(Opcodes.ALOAD, scope.tracerSlot());
+            mv.visitLdcInsn(name);
+            mv.visitMethodInsn(
+                Opcodes.INVOKEINTERFACE,
+                /* owner */ "leek/rt/Tracer",
+                /* name */ "enter",
+                /* descriptor */ "(Ljava/lang/String;)V",
+                /* isInterface */ true
+            );
+        }
+
+        // Initialize the result variable.
+        returnType.defaultValue(mv);
+        mv.visitVarInsn(returnType.storeOpcode(), scope.resultSlot());
+    }
+
+    private void writeInvokeBody(MethodVisitor mv, LocalScope scope)
+        throws AnalysisException
+    {
+        for (Statement statement : body)
+        {
+            statement.analyze(mv, scope);
+        }
+    }
+
+    private void writeInvokeEpilogue(MethodVisitor mv, LocalScope scope)
+        throws AnalysisException
+    {
+        // Tell the tracer the subroutine is leaving.
+        if (kind == SubroutineKind.PROCEDURE)
+        {
+            mv.visitVarInsn(Opcodes.ALOAD, scope.tracerSlot());
+            mv.visitMethodInsn(
+                Opcodes.INVOKEINTERFACE,
+                /* owner */ "leek/rt/Tracer",
+                /* name */ "leave",
+                /* descriptor */ "()V",
+                /* isInterface */ true
+            );
+        }
+
+        // Return the value of the result variable.
+        mv.visitVarInsn(returnType.loadOpcode(), scope.resultSlot());
+        mv.visitInsn(returnType.returnOpcode());
     }
 }

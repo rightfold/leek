@@ -30,7 +30,7 @@ public final class Main
     public static void main(String[] args) throws Exception
     {
         String source =
-            "function example(a bool, b bool, c bool) bool\n" +
+            "procedure example(a bool, b bool, c bool) bool\n" +
             "    begin\n" +
             "        copy a to result\n" +
             "        copy b to result\n" +
