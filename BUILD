@@ -1,3 +1,5 @@
+load('//tools:antlr4.bzl', 'antlr4_sources')
+
 java_binary(
     name = "leekc",
     main_class = "leek.c.Main",
@@ -13,6 +15,7 @@ java_binary(
 java_library(
     name = "libleekc",
     deps = [
+        "@org_antlr_antlr4_runtime//jar",
         "@org_ow2_asm_asm//jar",
     ],
     srcs = [
@@ -29,5 +32,14 @@ java_library(
         "src/main/java/leek/c/syntax/Type.java",
         "src/main/java/leek/c/syntax/ValueParameter.java",
         "src/main/java/leek/c/syntax/VariableExpression.java",
+        ":libleekcparse",
+    ],
+)
+
+antlr4_sources(
+    name = "libleekcparse",
+    package = "leek.c.parse",
+    srcs = [
+        "src/main/antlr4/leek/c/parse/Grammar.g4",
     ],
 )
