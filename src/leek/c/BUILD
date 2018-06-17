@@ -30,6 +30,7 @@ java_library(
         "syntax/BoolType.java",
         "syntax/CopyStatement.java",
         "syntax/Definition.java",
+        "syntax/EffectStatement.java",
         "syntax/Expression.java",
         "syntax/Node.java",
         "syntax/Statement.java",

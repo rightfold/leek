@@ -35,6 +35,9 @@ public final class Main
             "        copy a to result\n" +
             "        copy b to result\n" +
             "        copy c to result\n" +
+            "        effect a\n" +
+            "        effect b\n" +
+            "        effect c\n" +
             "    end\n";
 
         CharStream input = CharStreams.fromString(source);

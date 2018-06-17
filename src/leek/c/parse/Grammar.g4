@@ -10,6 +10,7 @@ grammar Grammar;
     import leek.c.syntax.BoolType;
     import leek.c.syntax.CopyStatement;
     import leek.c.syntax.Definition;
+    import leek.c.syntax.EffectStatement;
     import leek.c.syntax.Expression;
     import leek.c.syntax.Statement;
     import leek.c.syntax.SubroutineDefinition;
@@ -101,6 +102,7 @@ statementList returns [List<Statement> r]
 
 statement returns [Statement r]
     : copyStatement { $r = $copyStatement.r; }
+    | effectStatement { $r = $effectStatement.r; }
     ;
 
 copyStatement returns [CopyStatement r]
@@ -108,6 +110,14 @@ copyStatement returns [CopyStatement r]
         {
             SourceLocation sl = makeSourceLocation();
             $r = new CopyStatement(sl, $source.r, $target.text);
+        }
+    ;
+
+effectStatement returns [EffectStatement r]
+    : 'effect' expression
+        {
+            SourceLocation sl = makeSourceLocation();
+            $r = new EffectStatement(sl, $expression.r);
         }
     ;
 
