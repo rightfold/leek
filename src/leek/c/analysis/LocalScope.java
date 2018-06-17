@@ -5,17 +5,10 @@ import java.util.Map;
 
 public final class LocalScope
 {
-    /**
-     * The parent scope. May be null, in case this is the uppermost local
-     * scope.
-     */
-    public final LocalScope parent;
-
     private final Map<String, Variable> variables;
 
-    public LocalScope(LocalScope parent)
+    public LocalScope()
     {
-        this.parent = parent;
         this.variables = new HashMap<>();
     }
 
@@ -37,14 +30,21 @@ public final class LocalScope
         {
             return variable;
         }
-        else if (parent != null)
-        {
-            return parent.getVariable(name);
-        }
         else
         {
             // TODO(foldr): Throw more informational exception.
             throw new AnalysisException();
         }
+    }
+
+    /**
+     * The slot of the result variable.
+     *
+     * @throws AnalysisException If there is no result variable.
+     */
+    public int resultSlot() throws AnalysisException
+    {
+        Variable resultVariable = getVariable("result");
+        return resultVariable.slot;
     }
 }

@@ -25,15 +25,15 @@ public final class SubroutineDefinition extends Definition
      */
     public static enum SubroutineKind
     {
-        Function,
-        Procedure,
+        FUNCTION,
+        PROCEDURE,
     }
 
     public final String name;
     public final SubroutineKind kind;
     public final List<ValueParameter> parameters;
     public final Type returnType;
-    public final Expression body;
+    public final List<Statement> body;
 
     public SubroutineDefinition(
         SourceLocation sourceLocation,
@@ -41,7 +41,7 @@ public final class SubroutineDefinition extends Definition
         SubroutineKind kind,
         List<ValueParameter> parameters,
         Type returnType,
-        Expression body
+        List<Statement> body
     )
     {
         super(sourceLocation);
@@ -65,14 +65,20 @@ public final class SubroutineDefinition extends Definition
 
     private LocalScope createBodyLocalScope() throws AnalysisException
     {
-        LocalScope scope = new LocalScope(/* parent */ null);
-        for (int i = 0; i < parameters.size(); ++i)
+        // Skip the receiver, so start at one.
+        int slot = 1;
+
+        LocalScope scope = new LocalScope();
+
+        for (ValueParameter parameter : parameters)
         {
-            ValueParameter parameter = parameters.get(i);
-            int slot = i + 1;
-            Variable variable = new Variable(parameter.type, slot);
+            Variable variable = new Variable(parameter.type, slot++);
             scope.defineVariable(parameter.name, variable);
         }
+
+        Variable resultVariable = new Variable(returnType, slot++);
+        scope.defineVariable("result", resultVariable);
+
         return scope;
     }
 
@@ -132,9 +138,24 @@ public final class SubroutineDefinition extends Definition
     {
         MethodVisitor mv = writeInvokeMethodMetadata(cv);
         mv.visitCode();
+
         LocalScope scope = createBodyLocalScope();
-        body.analyze(mv, scope);
+        int resultSlot = scope.resultSlot();
+
+        // Initialize result variable.
+        returnType.defaultValue(mv);
+        mv.visitVarInsn(returnType.storeOpcode(), resultSlot);
+
+        // Analyze body.
+        for (Statement statement : body)
+        {
+            statement.analyze(mv, scope);
+        }
+
+        // Return value of result variable.
+        mv.visitVarInsn(returnType.loadOpcode(), resultSlot);
         mv.visitInsn(returnType.returnOpcode());
+
         mv.visitMaxs(0, 0);
         mv.visitEnd();
     }
