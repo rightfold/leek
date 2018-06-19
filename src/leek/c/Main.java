@@ -8,10 +8,12 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
-import leek.c.syntax.Definition;
+import leek.c.analysis.GlobalScope;
 
 import leek.c.parse.GrammarLexer;
 import leek.c.parse.GrammarParser;
+
+import leek.c.syntax.Definition;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -47,8 +49,10 @@ public final class Main
 
         Definition example = parser.definition().r;
 
+        GlobalScope gs = new GlobalScope();
         List<ClassWriter> classes = new ArrayList<>();
-        example.analyze(classes);
+        example.define(gs);
+        example.analyze(gs, classes);
         for (ClassWriter class_ : classes)
         {
             byte[] bytes = class_.toByteArray();

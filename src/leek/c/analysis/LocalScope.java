@@ -5,10 +5,14 @@ import java.util.Map;
 
 public final class LocalScope
 {
+    public final GlobalScope globalScope;
+
     private final Map<String, Variable> variables;
 
-    public LocalScope()
+    public LocalScope(GlobalScope globalScope)
     {
+        this.globalScope = globalScope;
+
         this.variables = new HashMap<>();
     }
 

@@ -23,6 +23,8 @@ java_library(
     ],
     srcs = [
         "analysis/AnalysisException.java",
+        "analysis/Global.java",
+        "analysis/GlobalScope.java",
         "analysis/LocalScope.java",
         "analysis/Variable.java",
         "diagnostics/SourceLocation.java",

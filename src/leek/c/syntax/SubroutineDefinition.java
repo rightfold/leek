@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import leek.c.analysis.AnalysisException;
+import leek.c.analysis.GlobalScope;
 import leek.c.analysis.LocalScope;
 import leek.c.analysis.Variable;
 
@@ -52,7 +53,15 @@ public final class SubroutineDefinition extends Definition
         this.body = body;
     }
 
-    public void analyze(List<ClassWriter> classes) throws AnalysisException
+    @Override
+    public void define(GlobalScope gs) throws AnalysisException
+    {
+        // TODO: Define subroutine in global scope.
+    }
+
+    @Override
+    public void analyze(GlobalScope gs, List<ClassWriter> classes)
+        throws AnalysisException
     {
         int cwFlags = ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS;
         ClassWriter cw = new ClassWriter(cwFlags);
@@ -60,14 +69,15 @@ public final class SubroutineDefinition extends Definition
         writeInstanceField(cw);
         writeClinitMethod(cw);
         writeInitMethod(cw);
-        writeInvokeMethod(cw);
+        writeInvokeMethod(cw, gs);
         cw.visitEnd();
         classes.add(cw);
     }
 
-    private LocalScope createBodyLocalScope() throws AnalysisException
+    private LocalScope createBodyLocalScope(GlobalScope globalScope)
+        throws AnalysisException
     {
-        LocalScope scope = new LocalScope();
+        LocalScope scope = new LocalScope(globalScope);
 
         // Skip the receiver and the tracer, so start at two.
         int slot = 2;
@@ -175,17 +185,18 @@ public final class SubroutineDefinition extends Definition
         );
     }
 
-    private void writeInvokeMethod(ClassVisitor cv) throws AnalysisException
+    private void writeInvokeMethod(ClassVisitor cv, GlobalScope gs)
+        throws AnalysisException
     {
         MethodVisitor mv = writeInvokeMethodMetadata(cv);
         mv.visitCode();
 
-        LocalScope scope = createBodyLocalScope();
-        int resultSlot = scope.resultSlot();
+        LocalScope ls = createBodyLocalScope(gs);
+        int resultSlot = ls.resultSlot();
 
-        writeInvokePrologue(mv, scope);
-        writeInvokeBody(mv, scope);
-        writeInvokeEpilogue(mv, scope);
+        writeInvokePrologue(mv, ls);
+        writeInvokeBody(mv, ls);
+        writeInvokeEpilogue(mv, ls);
 
         mv.visitMaxs(0, 0);
         mv.visitEnd();
